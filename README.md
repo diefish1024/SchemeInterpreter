@@ -3,7 +3,7 @@
 > SJTU CS1958-01 2025Fall 第三次大作业
 >
 
-请先阅读[解释器简明教程](https://notes.sjtu.edu.cn/pzbJsIoKQbSwt66MZR-vdQ):)
+请先阅读[解释器简明教程](https://notes.sjtu.edu.cn/pzbJsIoKQbSwt66MZR-vdQ)，有兴趣可以阅读[为什么Lisp语言如此先进？](https://www.ruanyifeng.com/blog/2010/10/why_lisp_is_superior.html):)
 
 ## 内容概述
 
