@@ -7,6 +7,7 @@
  */
 
 #include "value.hpp"
+#include "utils.hpp"
 
 // ============================================================================
 // Base ValueBase Implementation
@@ -115,34 +116,12 @@ Value IntegerV(int n) {
     return Value(new Integer(n));
 }
 
-// Rational
-// Helper function to calculate greatest common divisor
-static int gcd(int a, int b) {
-    if (a < 0) a = -a;
-    if (b < 0) b = -b;
-    while (b != 0) {
-        int temp = b;
-        b = a % b;
-        a = temp;
-    }
-    return a;
-}
-
 Rational::Rational(int num, int den) : ValueBase(V_RATIONAL) {
     if (den == 0) {
         throw std::runtime_error("Division by zero");
     }
     
-    // Simplify the fraction
-    int g = gcd(num, den);
-    numerator = num / g;
-    denominator = den / g;
-    
-    // Ensure denominator is positive
-    if (denominator < 0) {
-        numerator = -numerator;
-        denominator = -denominator;
-    }
+    util::normalize_rational(num, den);
 }
 
 void Rational::show(std::ostream &os) {

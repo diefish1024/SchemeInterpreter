@@ -1,21 +1,12 @@
 #include "Def.hpp"
 #include "expr.hpp"
+#include "utils.hpp"
 #include <cstring>
 #include <cstdlib>
 #include <vector>
 using std::vector;
 using std::string;
 using std::pair;
-
-// 辅助函数：计算最大公约数
-int gcd(int a, int b) {
-    while (b != 0) {
-        int temp = b;
-        b = a % b;
-        a = temp;
-    }
-    return a;
-}
 
 ExprBase::ExprBase(ExprType et) : e_type(et) {}
 
@@ -29,16 +20,7 @@ ExprBase* Expr::get() const { return ptr.get(); }
 Fixnum::Fixnum(int x) : ExprBase(E_FIXNUM), n(x) {}
 
 RationalNum::RationalNum(int num, int den) : ExprBase(E_RATIONAL), numerator(num), denominator(den) {
-    // 简化分数
-    int g = gcd(abs(numerator), abs(denominator));
-    numerator /= g;
-    denominator /= g;
-    
-    // 确保分母为正
-    if (denominator < 0) {
-        numerator = -numerator;
-        denominator = -denominator;
-    }
+    util::normalize_rational(num, den);
 }
 
 StringExpr::StringExpr(const std::string &str) : ExprBase(E_STRING), s(str) {}
