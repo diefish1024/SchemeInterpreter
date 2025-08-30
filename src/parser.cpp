@@ -74,7 +74,9 @@ Expr List::parse(Assoc &env) {
     }
     if (primitives.count(op) != 0) {
         vector<Expr> parameters;
-        //TODO: TO COMPLETE THE PARAMETER PARSER LOGIC
+        for (size_t i = 1; i < stxs.size(); ++i) {
+            parameters.push_back(stxs[i].parse(env));
+        }
         
         ExprType op_type = primitives[op];
         if (op_type == E_PLUS) {
@@ -166,8 +168,78 @@ Expr List::parse(Assoc &env) {
     }
 
     if (reserved_words.count(op) != 0) {
+        
     	switch (reserved_words[op]) {
-			//TODO: TO COMPLETE THE reserve_words PARSER LOGIC
+			case E_BEGIN: {
+                // (begin expr ...)
+                std::vector<Expr> body_expr;
+                for (size_t i = 1; i < stxs.size(); ++i) {
+                    body_expr.push_back(stxs[i].parse(env));
+                }
+                return Expr(new Begin(body_expr));
+            }
+            case E_QUOTE: {
+                // (quote expr)
+                if (stxs.size() != 2) {
+                    throw RuntimeError("Wrong number of arguments for quote");
+                }
+                return Expr(new Quote(stxs[1]));
+            }
+            case E_IF: {
+                // (if cond conseq alter)
+                if (stxs.size() != 4) {
+                    throw RuntimeError("Wrong numbrt of arguments for if");
+                }
+                return Expr(new If(stxs[1].parse(env), stxs[2].parse(env), stxs[3].parse(env)));
+            }
+            case E_COND: {
+                // (cond (test expr ...) ... [else expr ...])
+                if (stxs.size() < 2) {
+                    throw RuntimeError("Wrong numbrt of arguments for cond");
+                }
+                std::vector<std::vector<Expr>> clauses;
+                for (int i = 1; i < stxs.size(); ++i) {
+                    auto clause_list = dynamic_cast<List*>(stxs[i].get());
+                    if (clause_list == nullptr) {
+                        throw RuntimeError("Cond clause must be a list");
+                    }
+                    if (clause_list->stxs.empty()) {
+                        throw RuntimeError("Empty clause in cond expression");
+                    }
+                    std::vector<Expr> clause;
+                    bool is_else = false;
+                    auto first = dynamic_cast<Symbol*>(stxs[0].get());
+                    if (first && first->s == "else") {
+                        is_else = true;
+                        for (size_t j = 1; j <= clause_list->stxs.size(); ++j) {
+                            clause.push_back(clause_list->stxs[j].parse(env));
+                        }
+                    } else {
+                        for (auto stx: clause_list->stxs) {
+                            clause.push_back(stx.parse(env));
+                        }
+                    }
+                    clauses.push_back(clause);
+                    if (is_else && i < stxs.size() - 1) {
+                        throw RuntimeError("Else clause can only appear as the last clause in a cond expression");
+                    }
+                }
+                return Expr(new Cond(clauses));
+            }
+            case E_LAMBDA: {
+                // (lambda (var expr) ... expt)
+            }
+            case E_DEFINE: {
+                // (define var expr)
+            }
+            case E_LET: {
+                // (let (var expr)... expt)	
+            }
+            case E_LETREC: {
+            }
+            case E_SET: {
+                // (set! var expr)
+            }
         	default:
             	throw RuntimeError("Unknown reserved word: " + op);
     	}
