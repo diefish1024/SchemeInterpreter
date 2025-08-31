@@ -1,8 +1,8 @@
 #pragma once
-#include <algorithm>
 
 namespace util {
-    inline int gcd(int a, int b) {
+    template<typename T>
+    inline T gcd(T a, T b) {
         if (a < 0) a = -a;
         if (b < 0) b = -b;
         while (b != 0) {
@@ -13,11 +13,13 @@ namespace util {
         return a;
     }
 
-    inline int lcm(int a, int b) {
+    template<typename T>
+    inline T lcm(T a, T b) {
         return std::abs(a * b) / gcd(a, b);
     }
 
-    inline int normalize_rational(int& num, int& den) {
+    template<typename T>
+    inline T normalize_rational(T& num, T& den) {
         int g = gcd(num, den);
         num /= g;
         den /= g;
