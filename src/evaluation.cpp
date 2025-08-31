@@ -12,6 +12,7 @@
 #include "expr.hpp" 
 #include "RE.hpp"
 #include "syntax.hpp"
+#include "utils.hpp"
 #include <cstring>
 #include <vector>
 #include <map>
@@ -57,7 +58,11 @@ Value Binary::eval(Assoc &e) { // evaluation of two-operators primitive
 }
 
 Value Variadic::eval(Assoc &e) { // evaluation of multi-operator primitive
-    // TODO: TO COMPLETE THE VARIADIC CLASS
+    std::vector<Value> eval_list;
+    for (auto rand : rands) {
+        eval_list.push_back(rand->eval(e));
+    }
+    return evalRator(eval_list);
 }
 
 Value Var::eval(Assoc &e) { // evaluation of variable
@@ -100,24 +105,82 @@ Value Var::eval(Assoc &e) { // evaluation of variable
     return matched_value;
 }
 
+// helper function
+auto toRational(const Value& v) -> std::pair<int, int> {
+    if (v->v_type == V_INT) {
+        int n = dynamic_cast<Integer*>(v.get())->n;
+        return {n, 1};
+    } else if (v->v_type == V_RATIONAL) {
+        Rational* r = dynamic_cast<Rational*>(v.get());
+        return {r->numerator, r->denominator};
+    }
+    throw RuntimeError("+ is only defined for numbers");
+}
+
 Value Plus::evalRator(const Value &rand1, const Value &rand2) { // +
-    //TODO: To complete the addition logic
-    throw(RuntimeError("Wrong typename"));
+    auto [num1, den1] = toRational(rand1);
+    auto [num2, den2] = toRational(rand2);
+
+    #define ll long long
+    ll res_num = ((ll)num1 * den2 + (ll)num2 * den1) / util::gcd(den1, den2);
+    ll res_den = util::lcm(den1, den2);
+    #undef ll
+
+    if (res_den == 1) {
+        return IntegerV(static_cast<int>(res_num));
+    }
+    return RationalV(static_cast<int>(res_num), static_cast<int>(res_den));
 }
 
 Value Minus::evalRator(const Value &rand1, const Value &rand2) { // -
-    //TODO: To complete the substraction logic
-    throw(RuntimeError("Wrong typename"));
+    auto [num1, den1] = toRational(rand1);
+    auto [num2, den2] = toRational(rand2);
+
+    #define ll long long
+    ll res_num = ((ll)num1 * den2 - (ll)num2 * den1) / util::gcd(den1, den2);
+    ll res_den = util::lcm(den1, den2);
+    #undef ll
+
+    if (res_den == 1) {
+        return IntegerV(static_cast<int>(res_num));
+    }
+    return RationalV(static_cast<int>(res_num), static_cast<int>(res_den));
 }
 
 Value Mult::evalRator(const Value &rand1, const Value &rand2) { // *
-    //TODO: To complete the Multiplication logic
-    throw(RuntimeError("Wrong typename"));
+    auto [num1, den1] = toRational(rand1);
+    auto [num2, den2] = toRational(rand2);
+
+    #define ll long long
+    ll res_num = (ll)num1 * num2;
+    ll res_den = (ll)den1 * den2;
+    #undef ll
+    util::normalize_rational(res_num, res_den);
+
+    if (res_den == 1) {
+        return IntegerV(static_cast<int>(res_num));
+    }
+    return RationalV(static_cast<int>(res_num), static_cast<int>(res_den));
 }
 
 Value Div::evalRator(const Value &rand1, const Value &rand2) { // /
-    //TODO: To complete the dicision logic
-    throw(RuntimeError("Wrong typename"));
+    auto [num1, den1] = toRational(rand1);
+    auto [num2, den2] = toRational(rand2);
+
+    if (num2 == 0) {
+        throw RuntimeError("Division by zero");
+    }
+
+    #define ll long long
+    ll res_num = (ll)num1 * den2;
+    ll res_den = (ll)den1 * num2;
+    #undef ll
+    util::normalize_rational(res_num, res_den);
+
+    if (res_den == 1) {
+        return IntegerV(static_cast<int>(res_num));
+    }
+    return RationalV(static_cast<int>(res_num), static_cast<int>(res_den));
 }
 
 Value Modulo::evalRator(const Value &rand1, const Value &rand2) { // modulo
@@ -133,23 +196,119 @@ Value Modulo::evalRator(const Value &rand1, const Value &rand2) { // modulo
 }
 
 Value PlusVar::evalRator(const std::vector<Value> &args) { // + with multiple args
-    //TODO: To complete the addition logic
+    if (args.empty()) {
+        return IntegerV(0);
+    }
+    #define ll long long
+    ll res_num = 0;
+    ll res_den = 1;
+    for (const auto& arg : args) {
+        auto [cur_num, cur_den] = toRational(arg);
+        ll com_lcm = util::lcm(res_den, static_cast<ll>(cur_den));
+        res_num = res_num * (com_lcm / res_den) + (ll)cur_num * (com_lcm / cur_den);
+        res_den = com_lcm;
+        util::normalize_rational(res_num, res_den);
+    }
+    #undef ll
+    if (res_den == 1) {
+        return IntegerV(static_cast<int>(res_num));
+    }
+    return RationalV(static_cast<int>(res_num), static_cast<int>(res_den));
 }
 
 Value MinusVar::evalRator(const std::vector<Value> &args) { // - with multiple args
-    //TODO: To complete the substraction logic
+    if (args.empty()) {
+        throw RuntimeError("Minus expression expects at least one argument.");
+    }
+    #define ll long long
+    ll res_num;
+    ll res_den;
+    if (args.size() == 1) {
+        // (- x) => -x
+        auto [num, den] = toRational(args[0]);
+        res_num = -num;
+        res_den = den;
+    } else {
+        // x - y - z ...
+        auto [num0, den0] = toRational(args[0]);
+        res_num = num0;
+        res_den = den0;
+        for (size_t i = 1; i < args.size(); ++i) {
+            auto [cur_num, cur_den] = toRational(args[i]);
+            ll com_lcm = util::lcm(res_den, (ll)cur_den);
+            res_num = res_num * (com_lcm / res_den) - (ll)cur_num * (com_lcm / cur_den);
+            res_den = com_lcm;
+            util::normalize_rational(res_num, res_den);
+        }
+    }
+    #undef ll
+    util::normalize_rational(res_num, res_den);
+    if (res_den == 1) {
+        return IntegerV(static_cast<int>(res_num));
+    }
+    return RationalV(static_cast<int>(res_num), static_cast<int>(res_den));
 }
 
 Value MultVar::evalRator(const std::vector<Value> &args) { // * with multiple args
-    //TODO: To complete the multiplication logic
+    if (args.empty()) {
+        return IntegerV(1);
+    }
+    #define ll long long
+    ll res_num = 1;
+    ll res_den = 1;
+    for (const auto& arg : args) {
+        auto [cur_num, cur_den] = toRational(arg);
+        res_num *= cur_num;
+        res_den *= cur_den;
+        util::normalize_rational(res_num, res_den);
+    }
+    #undef ll
+    if (res_den == 1) {
+        return IntegerV(static_cast<int>(res_num));
+    }
+    return RationalV(static_cast<int>(res_num), static_cast<int>(res_den));
 }
 
 Value DivVar::evalRator(const std::vector<Value> &args) { // / with multiple args
-    //TODO: To complete the divisor logic
+    if (args.empty()) {
+        throw RuntimeError("Division expression expects at least one argument.");
+    }
+    #define ll long long
+    ll res_num;
+    ll res_den;
+    if (args.size() == 1) {
+        // (/ x) => 1 / x
+        auto [num, den] = toRational(args[0]);
+        if (num == 0) {
+            throw RuntimeError("Division by zero");
+        }
+        res_num = den;
+        res_den = num;
+    } else {
+        // x / y / z ...
+        auto [num0, den0] = toRational(args[0]);
+        res_num = num0;
+        res_den = den0;
+        for (size_t i = 1; i < args.size(); ++i) {
+            auto [cur_num, cur_den] = toRational(args[i]);
+            if (cur_num == 0) {
+                throw RuntimeError("Division by zero");
+            }
+            res_num *= cur_den;
+            res_den *= cur_num;
+            util::normalize_rational(res_num, res_den);
+        }
+    }
+    #undef ll
+    util::normalize_rational(res_num, res_den);
+    if (res_den == 1) {
+        return IntegerV(static_cast<int>(res_num));
+    }
+    return RationalV(static_cast<int>(res_num), static_cast<int>(res_den));
 }
 
 Value Expt::evalRator(const Value &rand1, const Value &rand2) { // expt
-    if (rand1->v_type == V_INT and rand2->v_type == V_INT) {
+    if (rand1->v_type == V_INT && rand2->v_type == V_INT) {
         int base = dynamic_cast<Integer*>(rand1.get())->n;
         int exponent = dynamic_cast<Integer*>(rand2.get())->n;
         
@@ -187,98 +346,169 @@ Value Expt::evalRator(const Value &rand1, const Value &rand2) { // expt
 
 //A FUNCTION TO SIMPLIFY THE COMPARISON WITH INTEGER AND RATIONAL NUMBER
 int compareNumericValues(const Value &v1, const Value &v2) {
-    if (v1->v_type == V_INT && v2->v_type == V_INT) {
-        int n1 = dynamic_cast<Integer*>(v1.get())->n;
-        int n2 = dynamic_cast<Integer*>(v2.get())->n;
-        return (n1 < n2) ? -1 : (n1 > n2) ? 1 : 0;
-    }
-    else if (v1->v_type == V_RATIONAL && v2->v_type == V_INT) {
+    #define ll long long
+    ll num1, den1;
+    ll num2, den2;
+    if (v1->v_type == V_INT) {
+        num1 = dynamic_cast<Integer*>(v1.get())->n;
+        den1 = 1;
+    } else if (v1->v_type == V_RATIONAL) {
         Rational* r1 = dynamic_cast<Rational*>(v1.get());
-        int n2 = dynamic_cast<Integer*>(v2.get())->n;
-        int left = r1->numerator;
-        int right = n2 * r1->denominator;
-        return (left < right) ? -1 : (left > right) ? 1 : 0;
+        num1 = r1->numerator;
+        den1 = r1->denominator;
+    } else {
+        throw RuntimeError("Numeric comparison expects a number");
     }
-    else if (v1->v_type == V_INT && v2->v_type == V_RATIONAL) {
-        int n1 = dynamic_cast<Integer*>(v1.get())->n;
+    if (v2->v_type == V_INT) {
+        num2 = dynamic_cast<Integer*>(v2.get())->n;
+        den2 = 1;
+    } else if (v2->v_type == V_RATIONAL) {
         Rational* r2 = dynamic_cast<Rational*>(v2.get());
-        int left = n1 * r2->denominator;
-        int right = r2->numerator;
-        return (left < right) ? -1 : (left > right) ? 1 : 0;
+        num2 = r2->numerator;
+        den2 = r2->denominator;
+    } else {
+        throw RuntimeError("Numeric comparison expects a number");
     }
-    else if (v1->v_type == V_RATIONAL && v2->v_type == V_RATIONAL) {
-        Rational* r1 = dynamic_cast<Rational*>(v1.get());
-        Rational* r2 = dynamic_cast<Rational*>(v2.get());
-        int left = r1->numerator * r2->denominator;
-        int right = r2->numerator * r1->denominator;
-        return (left < right) ? -1 : (left > right) ? 1 : 0;
+    #undef ll
+    #define ll long long
+    ll left_product = num1 * den2;
+    ll right_product = num2 * den1;
+    #undef ll
+    if (left_product < right_product) {
+        return -1; // v1 < v2
+    } else if (left_product > right_product) {
+        return 1; // v1 > v2
+    } else {
+        return 0; // v1 == v2
     }
-    throw RuntimeError("Wrong typename in numeric comparison");
 }
 
 Value Less::evalRator(const Value &rand1, const Value &rand2) { // <
-    //TODO: To complete the less logic
-    throw(RuntimeError("Wrong typename"));
+    int cmp_result = compareNumericValues(rand1, rand2);
+    return BooleanV(cmp_result == -1);
 }
 
 Value LessEq::evalRator(const Value &rand1, const Value &rand2) { // <=
-    //TODO: To complete the lesseq logic
-    throw(RuntimeError("Wrong typename"));
+    int cmp_result = compareNumericValues(rand1, rand2);
+    return BooleanV(cmp_result <= 0);
 }
 
 Value Equal::evalRator(const Value &rand1, const Value &rand2) { // =
-    //TODO: To complete the equal logic
-    throw(RuntimeError("Wrong typename"));
+    int cmp_result = compareNumericValues(rand1, rand2);
+    return BooleanV(cmp_result == 0);
 }
 
 Value GreaterEq::evalRator(const Value &rand1, const Value &rand2) { // >=
-    //TODO: To complete the greatereq logic
-    throw(RuntimeError("Wrong typename"));
+    int cmp_result = compareNumericValues(rand1, rand2);
+    return BooleanV(cmp_result >= 0);
 }
 
 Value Greater::evalRator(const Value &rand1, const Value &rand2) { // >
-    //TODO: To complete the greater logic
-    throw(RuntimeError("Wrong typename"));
+    int cmp_result = compareNumericValues(rand1, rand2);
+    return BooleanV(cmp_result == 1);
 }
 
 Value LessVar::evalRator(const std::vector<Value> &args) { // < with multiple args
-    //TODO: To complete the less logic
+    if (args.size() < 2) {
+        throw RuntimeError("'< ' expects at least two arguments");
+    }
+    for (size_t i = 0; i < args.size() - 1; ++i) {
+        if (compareNumericValues(args[i], args[i+1]) >= 0) {
+            return BooleanV(false);
+        }
+    }
+    return BooleanV(true);
 }
 
 Value LessEqVar::evalRator(const std::vector<Value> &args) { // <= with multiple args
-    //TODO: To complete the lesseq logic
+    if (args.size() < 2) {
+        throw RuntimeError("'<=' expects at least two arguments");
+    }
+    for (size_t i = 0; i < args.size() - 1; ++i) {
+        if (compareNumericValues(args[i], args[i+1]) > 0) {
+            return BooleanV(false);
+        }
+    }
+    return BooleanV(true);
 }
 
 Value EqualVar::evalRator(const std::vector<Value> &args) { // = with multiple args
-    //TODO: To complete the equal logic
+    if (args.size() < 2) {
+        throw RuntimeError("'= ' expects at least two arguments");
+    }
+    for (size_t i = 0; i < args.size() - 1; ++i) {
+        if (compareNumericValues(args[i], args[i+1]) != 0) {
+            return BooleanV(false);
+        }
+    }
+    return BooleanV(true);
 }
 
 Value GreaterEqVar::evalRator(const std::vector<Value> &args) { // >= with multiple args
-    //TODO: To complete the greatereq logic
+    if (args.size() < 2) {
+        throw RuntimeError("'>=' expects at least two arguments");
+    }
+    for (size_t i = 0; i < args.size() - 1; ++i) {
+        if (compareNumericValues(args[i], args[i+1]) < 0) {
+            return BooleanV(false);
+        }
+    }
+    return BooleanV(true);
 }
 
 Value GreaterVar::evalRator(const std::vector<Value> &args) { // > with multiple args
-    //TODO: To complete the greater logic
+    if (args.size() < 2) {
+        throw RuntimeError("'> ' expects at least two arguments");
+    }
+    for (size_t i = 0; i < args.size() - 1; ++i) {
+        if (compareNumericValues(args[i], args[i+1]) <= 0) {
+            return BooleanV(false);
+        }
+    }
+    return BooleanV(true);
 }
 
 Value Cons::evalRator(const Value &rand1, const Value &rand2) { // cons
-    //TODO: To complete the cons logic
+    return PairV(rand1, rand2);
 }
 
 Value ListFunc::evalRator(const std::vector<Value> &args) { // list function
-    //TODO: To complete the list logic
+    auto res = NullV();
+    for (int i = args.size() - 1; i >= 0; --i) {
+        res = PairV(args[i], res);
+    }
+    return res;
 }
 
 Value IsList::evalRator(const Value &rand) { // list?
-    //TODO: To complete the list? logic
+    auto cur = rand;
+    while (true) {
+        if (cur->v_type == V_NULL) {
+            return BooleanV(true);
+        } else if (cur->v_type == V_PAIR) {
+            auto p = dynamic_cast<Pair*>(rand.get());
+            cur = p->cdr;
+        } else {
+            return BooleanV(false);
+        }
+        
+    }
 }
 
 Value Car::evalRator(const Value &rand) { // car
-    //TODO: To complete the car logic
+    if (rand->v_type != V_PAIR) {
+        throw RuntimeError("expects argument to be a pair");
+    }
+    auto p = dynamic_cast<Pair*>(rand.get());
+    return p->car;
 }
 
 Value Cdr::evalRator(const Value &rand) { // cdr
-    //TODO: To complete the cdr logic
+    if (rand->v_type != V_PAIR) {
+        throw RuntimeError("expects argument to be a pair");
+    }
+    auto p = dynamic_cast<Pair*>(rand.get());
+    return p->cdr;
 }
 
 Value SetCar::evalRator(const Value &rand1, const Value &rand2) { // set-car!
@@ -343,8 +573,35 @@ Value Begin::eval(Assoc &e) {
     //TODO: To complete the begin logic
 }
 
+// helper function to convert Syntax to Value for quote
+Value convertSyntaxToValue(const Syntax& syntax) {
+    if (auto num = dynamic_cast<Number*>(syntax.get())) {
+        return IntegerV(num->n);
+    } else if (auto rational = dynamic_cast<RationalSyntax*>(syntax.get())) {
+        return RationalV(rational->numerator, rational->denominator);
+    } else if (auto str = dynamic_cast<StringSyntax*>(syntax.get())) {
+        return StringV(str->s);
+    } else if (auto sym = dynamic_cast<SymbolSyntax*>(syntax.get())) {
+        return SymbolV(sym->s);
+    } else if (auto true_syntax = dynamic_cast<TrueSyntax*>(syntax.get())) {
+        return BooleanV(true);
+    } else if (auto false_syntax = dynamic_cast<FalseSyntax*>(syntax.get())) {
+        return BooleanV(false);
+    } else if (auto list = dynamic_cast<List*>(syntax.get())) {
+        Value result = NullV();
+        // Build the list from right to left
+        for (int i = list->stxs.size() - 1; i >= 0; --i) {
+            Value element = convertSyntaxToValue(list->stxs[i]);
+            result = PairV(element, result);
+        }
+        return result;
+    }
+
+    throw RuntimeError("Unknown syntax type in quote");
+}
+
 Value Quote::eval(Assoc& e) {
-    //TODO: To complete the quote logic
+    return convertSyntaxToValue(s);
 }
 
 Value AndVar::eval(Assoc &e) { // and with short-circuit evaluation
