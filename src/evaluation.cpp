@@ -570,7 +570,15 @@ Value IsString::evalRator(const Value &rand) { // string?
 }
 
 Value Begin::eval(Assoc &e) {
-    //TODO: To complete the begin logic
+    if (es.empty()) {
+        return VoidV();
+    }
+
+    Value res = VoidV();
+    for (const auto& expr: es) {
+        res = expr->eval(e);
+    }
+    return res;
 }
 
 // helper function to convert Syntax to Value for quote
@@ -605,19 +613,62 @@ Value Quote::eval(Assoc& e) {
 }
 
 Value AndVar::eval(Assoc &e) { // and with short-circuit evaluation
-    //TODO: To complete the and logic
+    if (rands.empty()) {
+        return BooleanV(true);
+    }
+    Value last = BooleanV(true);
+    for (const auto& rand : rands) {
+        Value cur = rand->eval(e);
+        if (cur->v_type == V_BOOL) {
+            auto b_val = static_cast<Boolean*>(cur.get());
+            if (b_val->b == false) {
+                return BooleanV(false);
+            }
+        }
+        last = cur;
+    }
+    return last;
 }
 
 Value OrVar::eval(Assoc &e) { // or with short-circuit evaluation
-    //TODO: To complete the or logic
+    if (rands.empty()) {
+        return BooleanV(false);
+    }
+    Value last = BooleanV(true);
+    for (const auto& rand : rands) {
+        Value cur = rand->eval(e);
+        if (cur->v_type == V_BOOL) {
+            auto b_val = static_cast<Boolean*>(cur.get());
+            if (b_val->b == true) {
+                return BooleanV(true);
+            }
+        }
+        last = cur;
+    }
+    return last;
 }
 
 Value Not::evalRator(const Value &rand) { // not
-    //TODO: To complete the not logic
+    if (rand->v_type == V_BOOL) {
+        auto b_val = static_cast<Boolean*>(rand.get());
+        return BooleanV(!(b_val->b));
+    }
 }
 
 Value If::eval(Assoc &e) {
-    //TODO: To complete the if logic
+    Value cond_val = cond->eval(e);
+    bool is_false = false;
+    if (cond_val->v_type == V_BOOL) {
+        auto b_val = static_cast<Boolean*>(cond_val.get());
+        if (!b_val->b) {
+            is_false = true;
+        }
+    }
+    if (!is_false) {
+        return conseq->eval(e);
+    } else {
+        return alter->eval(e);
+    }
 }
 
 Value Cond::eval(Assoc &env) {
