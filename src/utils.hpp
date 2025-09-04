@@ -1,4 +1,7 @@
 #pragma once
+#include <string>
+#include <stdexcept>
+#include <regex>
 
 namespace util {
     template<typename T>
@@ -24,5 +27,22 @@ namespace util {
         num /= g;
         den /= g;
         return g;
+    }
+
+    inline bool is_valid_variable_name(const std::string& name) {
+        if (name.empty()) return false;
+        
+        char first = name[0];
+        if (std::isdigit(first) || first == '.' || first == '@') {
+            return false;
+        }
+
+        for (char c : name) {
+            if (c == '#' || c == '\'' || c == '\"' || c == '`') {
+                return false;
+            }
+        }
+        
+        return true;
     }
 }

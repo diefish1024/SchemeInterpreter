@@ -8,6 +8,7 @@
 
 #include "value.hpp"
 #include "utils.hpp"
+#include "RE.hpp"
 
 // ============================================================================
 // Base ValueBase Implementation
@@ -79,6 +80,7 @@ void modify(const std::string &x, const Value &v, Assoc &lst) {
             return;
         }
     }
+    throw RuntimeError("set!: undefined variable: " + x);
 }
 
 Value find(const std::string &x, Assoc &l) {

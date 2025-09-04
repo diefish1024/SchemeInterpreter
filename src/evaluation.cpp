@@ -66,41 +66,36 @@ Value Variadic::eval(Assoc &e) { // evaluation of multi-operator primitive
 }
 
 Value Var::eval(Assoc &e) { // evaluation of variable
-    // TODO: TO identify the invalid variable
-    // We request all valid variable just need to be a symbol,you should promise:
-    //The first character of a variable name cannot be a digit or any character from the set: {.@}
-    //If a string can be recognized as a number, it will be prioritized as a number. For example: 1, -1, +123, .123, +124., 1e-3
-    //Variable names can overlap with primitives and reserve_words
-    //Variable names can contain any non-whitespace characters except #, ', ", `, but the first character cannot be a digit
-    //When a variable is not defined in the current scope, your interpreter should output RuntimeError
-    
     Value matched_value = find(x, e);
     if (matched_value.get() == nullptr) {
         if (primitives.count(x)) {
-            Expr exp = nullptr;
-            switch (primitives[x]) {
-                case E_PLUS: { exp = (new Plus(new Var("parm1"), new Var("parm2"))); break; }
-                case E_MODULO: { exp = (new Modulo(new Var("parm1"), new Var("parm2"))); break; }
-                case E_VOID: { exp = (new MakeVoid()); break; }
-                case E_EQQ: { exp = (new IsEq(new Var("parm1"), new Var("parm2"))); break; }
-                case E_BOOLQ: { exp = (new IsBoolean(new Var("parm"))); break; }
-                case E_INTQ: { exp = (new IsFixnum(new Var("parm"))); break; }
-                case E_NULLQ: { exp = (new IsNull(new Var("parm"))); break; }
-                case E_PAIRQ: { exp = (new IsPair(new Var("parm"))); break; }
-                case E_PROCQ: { exp = (new IsProcedure(new Var("parm"))); break; }
-                case E_SYMBOLQ: { exp = (new IsSymbol(new Var("parm"))); break; }
-                case E_STRINGQ: { exp = (new IsString(new Var("parm"))); break; }
-                case E_EXPT: { exp = (new Expt(new Var("parm1"), new Var("parm2"))); break; }
-                case E_DISPLAY: { exp = (new Display(new Var("parm"))); break; }
-                case E_EXIT: { exp = (new Exit()); break; }
+              std::map<ExprType, std::pair<Expr, std::vector<std::string>>> primitive_map = {
+                  {E_VOID, {new MakeVoid(), {}}},
+                  {E_EXIT, {new Exit(), {}}},
+                  {E_BOOLQ, {new IsBoolean(new Var("parm")), {"parm"}}},
+                  {E_INTQ, {new IsFixnum(new Var("parm")), {"parm"}}},
+                  {E_NULLQ, {new IsNull(new Var("parm")), {"parm"}}},
+                  {E_PAIRQ, {new IsPair(new Var("parm")), {"parm"}}},
+                  {E_PROCQ, {new IsProcedure(new Var("parm")), {"parm"}}},
+                  {E_SYMBOLQ, {new IsSymbol(new Var("parm")),{"parm"}}},
+                  {E_STRINGQ, {new IsString(new Var("parm")),{"parm"}}},
+                  {E_DISPLAY, {new Display(new Var("parm")),{"parm"}}},
+                  {E_EXPT,{new Expt(new Var("parm1"), new Var("parm2")),{"parm1", "parm2"}}},
+                  {E_PLUS,{new Plus(new Var("parm1"), new Var("parm2")),{"parm1", "parm2"}}},
+                  {E_MINUS,{new Minus(new Var("parm1"), new Var("parm2")),{"parm1", "parm2"}}},
+                  {E_MUL,{new Mult(new Var("parm1"), new Var("parm2")),{"parm1", "parm2"}}},
+                  {E_DIV,{new Div(new Var("parm1"), new Var("parm2")),{"parm1", "parm2"}}},
+                  {E_MODULO,{new Modulo(new Var("parm1"), new Var("parm2")),{"parm1", "parm2"}}},
+                  {E_EXPT,{new Expt(new Var("parm1"), new Var("parm2")),{"parm1", "parm2"}}},
+                  {E_EQQ,{new IsEq(new Var("parm1"), new Var("parm2")),{"parm1", "parm2"}}}
+              };
+
+            auto it = primitive_map.find(primitives[x]);
+            if (it != primitive_map.end()) {
+                return ProcedureV(it->second.second, it->second.first, e);
             }
-            std::vector<std::string> parameters_;
-            //TODO: to PASS THE parameters_ correctly;
-            //COMPLETE THE CODE WITH THE HINT
-            return ProcedureV(parameters_, exp, e);
-        } else {
-            throw(RuntimeError("undefined variable"));
-        }
+      }
+      throw RuntimeError("undefined variable: " + x);
     }
     return matched_value;
 }
@@ -672,43 +667,64 @@ Value If::eval(Assoc &e) {
 }
 
 Value Cond::eval(Assoc &env) {
-    //TODO: To complete the cond logic
+    // TODO
+
 }
 
 Value Lambda::eval(Assoc &env) { 
-    //TODO: To complete the lambda logic
+    return ProcedureV(x, e, env);
 }
 
 Value Apply::eval(Assoc &e) {
-    if (rator->eval(e)->v_type != V_PROC) {throw RuntimeError("Attempt to apply a non-procedure");}
+    auto rator_val = rator->eval(e);
+    if (rator_val->v_type != V_PROC) {throw RuntimeError("Attempt to apply a non-procedure");}
 
-    //TODO: TO COMPLETE THE CLOSURE LOGIC
-    Procedure* clos_ptr = ;
+    Procedure* clos_ptr = dynamic_cast<Procedure*>(rator_val.get());
     
-    //TODO: TO COMPLETE THE ARGUMENT PARSER LOGIC
     std::vector<Value> args;
+    for (const auto& expr : rand) {
+        args.push_back(expr->eval(e));
+    }
     if (args.size() != clos_ptr->parameters.size()) {throw RuntimeError("Wrong number of arguments");}
 
-    //TODO: TO COMPLETE THE PARAMETERS' ENVIRONMENT LOGIC
-    Assoc param_env = ;
+    Assoc param_env = clos_ptr->env;
+    for (size_t i = 0; i < args.size(); ++i) {
+        param_env = extend(clos_ptr->parameters[i], args[i], param_env);
+    }
 
     return clos_ptr->e->eval(param_env);
 }
 
 Value Define::eval(Assoc &env) {
-    //TODO: To complete the define logic
+    env = extend(var, e->eval(env), env);
+    return VoidV();
 }
 
 Value Let::eval(Assoc &env) {
-    //TODO: To complete the let logic
+    Assoc let_env = env;
+    for (const auto& binding : bind) {
+        let_env = extend(binding.first, binding.second->eval(env), let_env);
+    }
+    return body->eval(let_env);
 }
 
 Value Letrec::eval(Assoc &env) {
-    //TODO: To complete the letrec logic
+    Assoc rec_env = env;
+    for (const auto& binding : bind) {
+        rec_env = extend(binding.first, Value(nullptr), rec_env);
+    }
+
+    for (const auto& binding : bind) {
+        auto val = binding.second->eval(rec_env);
+        modify(binding.first, val, rec_env);
+    }
+
+    return body->eval(rec_env);
 }
 
 Value Set::eval(Assoc &env) {
-    //TODO: To complete the set logic
+    modify(var, e->eval(env), env);
+    return VoidV();
 }
 
 Value Display::evalRator(const Value &rand) { // display function
