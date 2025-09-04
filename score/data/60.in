@@ -1,1 +1,1 @@
-(number? 7)
+(fixnum? 7)

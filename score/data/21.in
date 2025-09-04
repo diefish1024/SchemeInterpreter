@@ -1,1 +1,1 @@
-(number? (quote ()))
+(fixnum? (quote ()))
