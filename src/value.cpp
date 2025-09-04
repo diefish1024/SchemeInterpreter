@@ -118,12 +118,12 @@ Value IntegerV(int n) {
     return Value(new Integer(n));
 }
 
-Rational::Rational(int num, int den) : ValueBase(V_RATIONAL) {
+Rational::Rational(int num, int den) : ValueBase(V_RATIONAL), numerator(num), denominator(den) {
     if (den == 0) {
         throw std::runtime_error("Division by zero");
     }
     
-    util::normalize_rational(num, den);
+    util::normalize_rational(numerator, denominator);
 }
 
 void Rational::show(std::ostream &os) {
