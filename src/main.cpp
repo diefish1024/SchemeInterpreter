@@ -45,7 +45,7 @@ bool isExplicitVoidCall(Expr expr) {
     return false;
 }
 
-void REPL(){
+void REPL() {
     // read - evaluation - print loop
     Assoc global_env = empty();
     while (1){
@@ -62,8 +62,8 @@ void REPL(){
             val -> show(std :: cout); // value print
         }
         catch (const RuntimeError &RE){
-            std :: cout << RE.message();
-            // std :: cout << "RuntimeError";
+            // std::cout << RE.message();
+            std::cout << "RuntimeError";
         }
         puts("");
     }
