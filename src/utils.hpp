@@ -9,7 +9,7 @@ namespace util {
         if (a < 0) a = -a;
         if (b < 0) b = -b;
         while (b != 0) {
-            int temp = b;
+            T temp = b;
             b = a % b;
             a = temp;
         }
@@ -18,12 +18,12 @@ namespace util {
 
     template<typename T>
     inline T lcm(T a, T b) {
-        return std::abs(a * b) / gcd(a, b);
+        return std::abs(a) / gcd(a, b) * std::abs(b);
     }
 
     template<typename T>
     inline T normalize_rational(T& num, T& den) {
-        int g = gcd(num, den);
+        T g = gcd(num, den);
         num /= g;
         den /= g;
         return g;

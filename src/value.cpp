@@ -108,21 +108,21 @@ Value VoidV() {
 }
 
 // Integer
-Integer::Integer(int n) : ValueBase(V_INT), n(n) {}
+Integer::Integer(ll n) : ValueBase(V_INT), n(n) {}
 
 void Integer::show(std::ostream &os) {
     os << n;
 }
 
-Value IntegerV(int n) {
+Value IntegerV(ll n) {
     return Value(new Integer(n));
 }
 
-Rational::Rational(int num, int den) : ValueBase(V_RATIONAL), numerator(num), denominator(den) {
-    if (den == 0) {
+Rational::Rational(ll num, ll den) : ValueBase(V_RATIONAL), numerator(num), denominator(den) {
+    if (denominator == 0) {
         throw std::runtime_error("Division by zero");
     }
-    if (den < 0) {
+    if (denominator < (ll)0) {
         numerator = -numerator;
         denominator = -denominator;
     }
@@ -137,7 +137,7 @@ void Rational::show(std::ostream &os) {
     }
 }
 
-Value RationalV(int num, int den) {
+Value RationalV(ll num, ll den) {
     return Value(new Rational(num, den));
 }
 

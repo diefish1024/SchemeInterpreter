@@ -15,6 +15,8 @@
 #include <cstring>
 #include <vector>
 
+using ll = long long;
+
 // ============================================================================
 // Base classes and smart pointer wrappers
 // ============================================================================
@@ -90,22 +92,22 @@ Value VoidV();
  * @brief Integer value
  */
 struct Integer : ValueBase {
-    int n;
-    Integer(int);
+    ll n;
+    Integer(ll);
     virtual void show(std::ostream &) override;
 };
-Value IntegerV(int);
+Value IntegerV(ll);
 
 /**
  * @brief Rational number value
  */
 struct Rational : ValueBase {
-    int numerator;
-    int denominator;
-    Rational(int, int);
+    ll numerator;
+    ll denominator;
+    Rational(ll, ll);
     virtual void show(std::ostream &) override;
 };
-Value RationalV(int, int);
+Value RationalV(ll, ll);
 
 /**
  * @brief Boolean value

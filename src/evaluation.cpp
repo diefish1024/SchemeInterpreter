@@ -21,6 +21,8 @@
 extern std::map<std::string, ExprType> primitives;
 extern std::map<std::string, ExprType> reserved_words;
 
+using ll = long long;
+
 Value Fixnum::eval(Assoc &e) { // evaluation of a fixnum
     return IntegerV(n);
 }
@@ -101,9 +103,9 @@ Value Var::eval(Assoc &e) { // evaluation of variable
 }
 
 // helper function
-auto toRational(const Value& v) -> std::pair<int, int> {
+auto toRational(const Value& v) -> std::pair<ll, ll> {
     if (v->v_type == V_INT) {
-        int n = dynamic_cast<Integer*>(v.get())->n;
+        ll n = dynamic_cast<Integer*>(v.get())->n;
         return {n, 1};
     } else if (v->v_type == V_RATIONAL) {
         Rational* r = dynamic_cast<Rational*>(v.get());
@@ -116,46 +118,40 @@ Value Plus::evalRator(const Value &rand1, const Value &rand2) { // +
     auto [num1, den1] = toRational(rand1);
     auto [num2, den2] = toRational(rand2);
 
-    #define ll long long
-    ll res_num = ((ll)num1 * den2 + (ll)num2 * den1) / util::gcd(den1, den2);
+    ll res_num = (num1 * den2 + num2 * den1) / util::gcd(den1, den2);
     ll res_den = util::lcm(den1, den2);
-    #undef ll
 
     if (res_den == 1) {
-        return IntegerV(static_cast<int>(res_num));
+        return IntegerV(res_num);
     }
-    return RationalV(static_cast<int>(res_num), static_cast<int>(res_den));
+    return RationalV(res_num, res_den);
 }
 
 Value Minus::evalRator(const Value &rand1, const Value &rand2) { // -
     auto [num1, den1] = toRational(rand1);
     auto [num2, den2] = toRational(rand2);
 
-    #define ll long long
-    ll res_num = ((ll)num1 * den2 - (ll)num2 * den1) / util::gcd(den1, den2);
+    ll res_num = (num1 * den2 - num2 * den1) / util::gcd(den1, den2);
     ll res_den = util::lcm(den1, den2);
-    #undef ll
 
     if (res_den == 1) {
-        return IntegerV(static_cast<int>(res_num));
+        return IntegerV(res_num);
     }
-    return RationalV(static_cast<int>(res_num), static_cast<int>(res_den));
+    return RationalV(res_num, res_den);
 }
 
 Value Mult::evalRator(const Value &rand1, const Value &rand2) { // *
     auto [num1, den1] = toRational(rand1);
     auto [num2, den2] = toRational(rand2);
 
-    #define ll long long
-    ll res_num = (ll)num1 * num2;
-    ll res_den = (ll)den1 * den2;
-    #undef ll
+    ll res_num = num1 * num2;
+    ll res_den = den1 * den2;
     util::normalize_rational(res_num, res_den);
 
     if (res_den == 1) {
-        return IntegerV(static_cast<int>(res_num));
+        return IntegerV(res_num);
     }
-    return RationalV(static_cast<int>(res_num), static_cast<int>(res_den));
+    return RationalV(res_num, res_den);
 }
 
 Value Div::evalRator(const Value &rand1, const Value &rand2) { // /
@@ -166,16 +162,14 @@ Value Div::evalRator(const Value &rand1, const Value &rand2) { // /
         throw RuntimeError("Division by zero");
     }
 
-    #define ll long long
-    ll res_num = (ll)num1 * den2;
-    ll res_den = (ll)den1 * num2;
-    #undef ll
+    ll res_num = num1 * den2;
+    ll res_den = den1 * num2;
     util::normalize_rational(res_num, res_den);
 
     if (res_den == 1) {
-        return IntegerV(static_cast<int>(res_num));
+        return IntegerV(res_num);
     }
-    return RationalV(static_cast<int>(res_num), static_cast<int>(res_den));
+    return RationalV(res_num, res_den);
 }
 
 Value Modulo::evalRator(const Value &rand1, const Value &rand2) { // modulo
@@ -194,28 +188,25 @@ Value PlusVar::evalRator(const std::vector<Value> &args) { // + with multiple ar
     if (args.empty()) {
         return IntegerV(0);
     }
-    #define ll long long
     ll res_num = 0;
     ll res_den = 1;
     for (const auto& arg : args) {
         auto [cur_num, cur_den] = toRational(arg);
         ll com_lcm = util::lcm(res_den, static_cast<ll>(cur_den));
-        res_num = res_num * (com_lcm / res_den) + (ll)cur_num * (com_lcm / cur_den);
+        res_num = res_num * (com_lcm / res_den) + cur_num * (com_lcm / cur_den);
         res_den = com_lcm;
         util::normalize_rational(res_num, res_den);
     }
-    #undef ll
     if (res_den == 1) {
-        return IntegerV(static_cast<int>(res_num));
+        return IntegerV(res_num);
     }
-    return RationalV(static_cast<int>(res_num), static_cast<int>(res_den));
+    return RationalV(res_num, res_den);
 }
 
 Value MinusVar::evalRator(const std::vector<Value> &args) { // - with multiple args
     if (args.empty()) {
         throw RuntimeError("Minus expression expects at least one argument.");
     }
-    #define ll long long
     ll res_num;
     ll res_den;
     if (args.size() == 1) {
@@ -230,25 +221,23 @@ Value MinusVar::evalRator(const std::vector<Value> &args) { // - with multiple a
         res_den = den0;
         for (size_t i = 1; i < args.size(); ++i) {
             auto [cur_num, cur_den] = toRational(args[i]);
-            ll com_lcm = util::lcm(res_den, (ll)cur_den);
-            res_num = res_num * (com_lcm / res_den) - (ll)cur_num * (com_lcm / cur_den);
+            ll com_lcm = util::lcm(res_den, cur_den);
+            res_num = res_num * (com_lcm / res_den) - cur_num * (com_lcm / cur_den);
             res_den = com_lcm;
             util::normalize_rational(res_num, res_den);
         }
     }
-    #undef ll
     util::normalize_rational(res_num, res_den);
     if (res_den == 1) {
-        return IntegerV(static_cast<int>(res_num));
+        return IntegerV(res_num);
     }
-    return RationalV(static_cast<int>(res_num), static_cast<int>(res_den));
+    return RationalV(res_num, res_den);
 }
 
 Value MultVar::evalRator(const std::vector<Value> &args) { // * with multiple args
     if (args.empty()) {
         return IntegerV(1);
     }
-    #define ll long long
     ll res_num = 1;
     ll res_den = 1;
     for (const auto& arg : args) {
@@ -257,18 +246,16 @@ Value MultVar::evalRator(const std::vector<Value> &args) { // * with multiple ar
         res_den *= cur_den;
         util::normalize_rational(res_num, res_den);
     }
-    #undef ll
     if (res_den == 1) {
-        return IntegerV(static_cast<int>(res_num));
+        return IntegerV(res_num);
     }
-    return RationalV(static_cast<int>(res_num), static_cast<int>(res_den));
+    return RationalV(res_num, res_den);
 }
 
 Value DivVar::evalRator(const std::vector<Value> &args) { // / with multiple args
     if (args.empty()) {
         throw RuntimeError("Division expression expects at least one argument.");
     }
-    #define ll long long
     ll res_num;
     ll res_den;
     if (args.size() == 1) {
@@ -294,12 +281,11 @@ Value DivVar::evalRator(const std::vector<Value> &args) { // / with multiple arg
             util::normalize_rational(res_num, res_den);
         }
     }
-    #undef ll
     util::normalize_rational(res_num, res_den);
     if (res_den == 1) {
-        return IntegerV(static_cast<int>(res_num));
+        return IntegerV(res_num);
     }
-    return RationalV(static_cast<int>(res_num), static_cast<int>(res_den));
+    return RationalV(res_num, res_den);
 }
 
 Value Expt::evalRator(const Value &rand1, const Value &rand2) { // expt
