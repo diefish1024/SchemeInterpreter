@@ -122,7 +122,10 @@ Rational::Rational(int num, int den) : ValueBase(V_RATIONAL), numerator(num), de
     if (den == 0) {
         throw std::runtime_error("Division by zero");
     }
-    
+    if (den < 0) {
+        numerator = -numerator;
+        denominator = -denominator;
+    }
     util::normalize_rational(numerator, denominator);
 }
 
