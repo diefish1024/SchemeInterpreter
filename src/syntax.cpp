@@ -1,4 +1,5 @@
 #include "syntax.hpp"
+#include "RE.hpp"
 #include <cstring>
 #include <vector>
 
@@ -38,9 +39,15 @@ void StringSyntax::show(std::ostream &os) {
 List::List() {}
 void List::show(std::ostream &os) {
     os << '(';
-    for (auto stx : stxs) {
-        stx->show(os);
-        os << ' ';
+    for (size_t i = 0; i < stxs.size(); ++i) {
+        stxs[i]->show(os);
+        if (i < stxs.size() - 1 || is_improper_list) {
+            os << ' ';
+        }
+    }
+    if (is_improper_list && improper_tail.get() != nullptr) {
+        os << ". ";
+        improper_tail->show(os);
     }
     os << ')';
 }
@@ -133,7 +140,7 @@ Syntax createIdentifierSyntax(const std::string &s) {
 // no leading space
 Syntax readItem(std::istream &is) {
   if (is.peek() == '(' || is.peek() == '[') {
-    is.get();
+    // is.get();
     return readList(is);
   }
   if (is.peek() == '\'')
@@ -207,11 +214,36 @@ Syntax readItem(std::istream &is) {
 }
 
 Syntax readList(std::istream &is) {
-    List *stx = new List();
-    while (readSpace(is).peek() != ')' && readSpace(is).peek() != ')')
-        stx->stxs.push_back(readItem(is));
-    is.get(); // ')'
-    return Syntax(stx);
+    List *list_stx = new List();
+    char opening_char = is.get();
+    char closing_char = (opening_char == '(') ? ')' : ']';
+    while (true) {
+        readSpace(is);
+        char next_char = is.peek();
+        if (next_char == closing_char) {
+            is.get();
+            break;
+        }
+        if (next_char == '.') {
+            is.get();
+            
+            readSpace(is); 
+            if (is.peek() == closing_char) {
+                throw RuntimeError("syntax error: unexpected ')' after '.'");
+            }
+            list_stx->is_improper_list = true;
+            list_stx->improper_tail = readItem(is);
+            readSpace(is);
+            if (is.peek() != closing_char) {
+                throw RuntimeError("syntax error: extra elements after dotted pair");
+            }
+            continue;
+        }
+        
+        list_stx->stxs.push_back(readItem(is));
+    }
+    
+    return Syntax(list_stx);
 }
 
 Syntax readSyntax(std::istream &is) {

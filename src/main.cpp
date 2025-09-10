@@ -52,10 +52,15 @@ void REPL() {
         #ifndef ONLINE_JUDGE
             std::cout << "scm> ";
         #endif
-        Syntax stx = readSyntax(std :: cin); // read
+        std::string line;
+        if (!std::getline(std::cin, line)) {
+            break;
+        }
+        std::istringstream iss(line);
         try{
-            Expr expr = stx -> parse(global_env); // parse
+            Syntax stx = readSyntax(iss); // read
             // stx -> show(std :: cout); // syntax print
+            Expr expr = stx -> parse(global_env); // parse
             Value val = expr -> eval(global_env);
             if (val -> v_type == V_TERMINATE)
                 break;

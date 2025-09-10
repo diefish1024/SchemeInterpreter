@@ -481,7 +481,7 @@ Value IsList::evalRator(const Value &rand) { // list?
         if (cur->v_type == V_NULL) {
             return BooleanV(true);
         } else if (cur->v_type == V_PAIR) {
-            auto p = dynamic_cast<Pair*>(rand.get());
+            auto p = dynamic_cast<Pair*>(cur.get());
             cur = p->cdr;
         } else {
             return BooleanV(false);
@@ -592,6 +592,9 @@ Value convertSyntaxToValue(const Syntax& syntax) {
         return BooleanV(false);
     } else if (auto list = dynamic_cast<List*>(syntax.get())) {
         Value result = NullV();
+        if (list->is_improper_list && list->improper_tail.get() != nullptr) {
+            result = convertSyntaxToValue(list->improper_tail);
+        }
         // Build the list from right to left
         for (int i = list->stxs.size() - 1; i >= 0; --i) {
             Value element = convertSyntaxToValue(list->stxs[i]);

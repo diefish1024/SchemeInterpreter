@@ -14,6 +14,7 @@ struct SyntaxBase {
 
 struct Syntax {
     std::shared_ptr<SyntaxBase> ptr;
+    Syntax() : ptr(nullptr) {}
     Syntax(SyntaxBase *);
     SyntaxBase* operator->() const;
     SyntaxBase& operator*();
@@ -64,6 +65,8 @@ struct StringSyntax : SyntaxBase {
 
 struct List : SyntaxBase {
     std::vector<Syntax> stxs;
+    bool is_improper_list = false;
+    Syntax improper_tail = nullptr;
     List();
     virtual Expr parse(Assoc &) override;
     virtual void show(std::ostream &) override;
