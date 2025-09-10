@@ -88,16 +88,12 @@ Expr List::parse(Assoc &env) {
         ExprType op_type = primitives[op];
         switch (primitives[op]) {
             case E_PLUS:
-                if (parameters.size() < 2) throw RuntimeError("+ expects at least 2 arguments");
                 return parameters.size() == 2 ? Expr(new Plus(parameters[0], parameters[1])) : Expr(new PlusVar(parameters));
             case E_MINUS:
-                if (parameters.size() < 1) throw RuntimeError("- expects at least 1 argument");
                  return parameters.size() == 2 ? Expr(new Minus(parameters[0], parameters[1])) : Expr(new MinusVar(parameters));
             case E_MUL:
-                 if (parameters.size() < 2) throw RuntimeError("* expects at least 2 arguments");
                  return parameters.size() == 2 ? Expr(new Mult(parameters[0], parameters[1])) : Expr(new MultVar(parameters));
             case E_DIV:
-                 if (parameters.size() < 1) throw RuntimeError("/ expects at least 1 argument");
                  return parameters.size() == 2 ? Expr(new Div(parameters[0], parameters[1])) : Expr(new DivVar(parameters));
             case E_MODULO:
                 if (parameters.size() != 2) throw RuntimeError("modulo expects exactly 2 arguments");
