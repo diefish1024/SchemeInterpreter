@@ -635,15 +635,11 @@ Value OrVar::eval(Assoc &e) { // or with short-circuit evaluation
     Value last = BooleanV(true);
     for (const auto& rand : rands) {
         Value cur = rand->eval(e);
-        if (cur->v_type == V_BOOL) {
-            auto b_val = static_cast<Boolean*>(cur.get());
-            if (b_val->b == true) {
-                return BooleanV(true);
-            }
+        if (!(cur->v_type == V_BOOL && dynamic_cast<Boolean*>(cur.get())->b == false)) {
+            return cur;
         }
-        last = cur;
     }
-    return last;
+    return BooleanV(false);
 }
 
 Value Not::evalRator(const Value &rand) { // not
