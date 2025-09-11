@@ -6,6 +6,7 @@
 #include <sstream>
 #include <iostream>
 #include <map>
+#include <limits>
 
 extern std::map<std::string, ExprType> primitives;
 extern std::map<std::string, ExprType> reserved_words;
@@ -52,13 +53,8 @@ void REPL() {
         #ifndef ONLINE_JUDGE
             std::cout << "scm> ";
         #endif
-        std::string line;
-        if (!std::getline(std::cin, line)) {
-            break;
-        }
-        std::istringstream iss(line);
         try{
-            Syntax stx = readSyntax(iss); // read
+            Syntax stx = readSyntax(std::cin); // read
             // stx -> show(std :: cout); // syntax print
             Expr expr = stx -> parse(global_env); // parse
             Value val = expr -> eval(global_env);
@@ -69,6 +65,8 @@ void REPL() {
         catch (const RuntimeError &RE){
             // std::cout << RE.message();
             std::cout << "RuntimeError";
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         }
         puts("");
     }
