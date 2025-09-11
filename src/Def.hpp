@@ -16,6 +16,8 @@
 #include <iostream>
 #include <map>
 
+using NumericType = int;
+
 // Forward declarations
 struct Syntax;
 struct Expr;

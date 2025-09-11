@@ -21,8 +21,6 @@
 extern std::map<std::string, ExprType> primitives;
 extern std::map<std::string, ExprType> reserved_words;
 
-using ll = long long;
-
 Value Fixnum::eval(Assoc &e) { // evaluation of a fixnum
     return IntegerV(n);
 }
@@ -103,9 +101,9 @@ Value Var::eval(Assoc &e) { // evaluation of variable
 }
 
 // helper function
-auto toRational(const Value& v) -> std::pair<ll, ll> {
+auto toRational(const Value& v) -> std::pair<NumericType, NumericType> {
     if (v->v_type == V_INT) {
-        ll n = dynamic_cast<Integer*>(v.get())->n;
+        NumericType n = dynamic_cast<Integer*>(v.get())->n;
         return {n, 1};
     } else if (v->v_type == V_RATIONAL) {
         Rational* r = dynamic_cast<Rational*>(v.get());
@@ -118,8 +116,8 @@ Value Plus::evalRator(const Value &rand1, const Value &rand2) { // +
     auto [num1, den1] = toRational(rand1);
     auto [num2, den2] = toRational(rand2);
 
-    ll res_num = (num1 * den2 + num2 * den1) / util::gcd(den1, den2);
-    ll res_den = util::lcm(den1, den2);
+    NumericType res_num = (num1 * den2 + num2 * den1) / util::gcd(den1, den2);
+    NumericType res_den = util::lcm(den1, den2);
 
     if (res_den == 1) {
         return IntegerV(res_num);
@@ -131,8 +129,8 @@ Value Minus::evalRator(const Value &rand1, const Value &rand2) { // -
     auto [num1, den1] = toRational(rand1);
     auto [num2, den2] = toRational(rand2);
 
-    ll res_num = (num1 * den2 - num2 * den1) / util::gcd(den1, den2);
-    ll res_den = util::lcm(den1, den2);
+    NumericType res_num = (num1 * den2 - num2 * den1) / util::gcd(den1, den2);
+    NumericType res_den = util::lcm(den1, den2);
 
     if (res_den == 1) {
         return IntegerV(res_num);
@@ -144,8 +142,8 @@ Value Mult::evalRator(const Value &rand1, const Value &rand2) { // *
     auto [num1, den1] = toRational(rand1);
     auto [num2, den2] = toRational(rand2);
 
-    ll res_num = num1 * num2;
-    ll res_den = den1 * den2;
+    NumericType res_num = num1 * num2;
+    NumericType res_den = den1 * den2;
     util::normalize_rational(res_num, res_den);
 
     if (res_den == 1) {
@@ -162,8 +160,8 @@ Value Div::evalRator(const Value &rand1, const Value &rand2) { // /
         throw RuntimeError("Division by zero");
     }
 
-    ll res_num = num1 * den2;
-    ll res_den = den1 * num2;
+    NumericType res_num = num1 * den2;
+    NumericType res_den = den1 * num2;
     util::normalize_rational(res_num, res_den);
 
     if (res_den == 1) {
@@ -188,11 +186,11 @@ Value PlusVar::evalRator(const std::vector<Value> &args) { // + with multiple ar
     if (args.empty()) {
         return IntegerV(0);
     }
-    ll res_num = 0;
-    ll res_den = 1;
+    NumericType res_num = 0;
+    NumericType res_den = 1;
     for (const auto& arg : args) {
         auto [cur_num, cur_den] = toRational(arg);
-        ll com_lcm = util::lcm(res_den, static_cast<ll>(cur_den));
+        NumericType com_lcm = util::lcm(res_den, static_cast<NumericType>(cur_den));
         res_num = res_num * (com_lcm / res_den) + cur_num * (com_lcm / cur_den);
         res_den = com_lcm;
         util::normalize_rational(res_num, res_den);
@@ -207,8 +205,8 @@ Value MinusVar::evalRator(const std::vector<Value> &args) { // - with multiple a
     if (args.empty()) {
         throw RuntimeError("Minus expression expects at least one argument.");
     }
-    ll res_num;
-    ll res_den;
+    NumericType res_num;
+    NumericType res_den;
     if (args.size() == 1) {
         // (- x) => -x
         auto [num, den] = toRational(args[0]);
@@ -221,7 +219,7 @@ Value MinusVar::evalRator(const std::vector<Value> &args) { // - with multiple a
         res_den = den0;
         for (size_t i = 1; i < args.size(); ++i) {
             auto [cur_num, cur_den] = toRational(args[i]);
-            ll com_lcm = util::lcm(res_den, cur_den);
+            NumericType com_lcm = util::lcm(res_den, cur_den);
             res_num = res_num * (com_lcm / res_den) - cur_num * (com_lcm / cur_den);
             res_den = com_lcm;
             util::normalize_rational(res_num, res_den);
@@ -238,8 +236,8 @@ Value MultVar::evalRator(const std::vector<Value> &args) { // * with multiple ar
     if (args.empty()) {
         return IntegerV(1);
     }
-    ll res_num = 1;
-    ll res_den = 1;
+    NumericType res_num = 1;
+    NumericType res_den = 1;
     for (const auto& arg : args) {
         auto [cur_num, cur_den] = toRational(arg);
         res_num *= cur_num;
@@ -256,8 +254,8 @@ Value DivVar::evalRator(const std::vector<Value> &args) { // / with multiple arg
     if (args.empty()) {
         throw RuntimeError("Division expression expects at least one argument.");
     }
-    ll res_num;
-    ll res_den;
+    NumericType res_num;
+    NumericType res_den;
     if (args.size() == 1) {
         // (/ x) => 1 / x
         auto [num, den] = toRational(args[0]);
@@ -327,9 +325,9 @@ Value Expt::evalRator(const Value &rand1, const Value &rand2) { // expt
 
 //A FUNCTION TO SIMPLIFY THE COMPARISON WITH INTEGER AND RATIONAL NUMBER
 int compareNumericValues(const Value &v1, const Value &v2) {
-    #define ll long long
-    ll num1, den1;
-    ll num2, den2;
+    #define NumericType long long
+    NumericType num1, den1;
+    NumericType num2, den2;
     if (v1->v_type == V_INT) {
         num1 = dynamic_cast<Integer*>(v1.get())->n;
         den1 = 1;
@@ -350,11 +348,11 @@ int compareNumericValues(const Value &v1, const Value &v2) {
     } else {
         throw RuntimeError("Numeric comparison expects a number");
     }
-    #undef ll
-    #define ll long long
-    ll left_product = num1 * den2;
-    ll right_product = num2 * den1;
-    #undef ll
+    #undef NumericType
+    #define NumericType long long
+    NumericType left_product = num1 * den2;
+    NumericType right_product = num2 * den1;
+    #undef NumericType
     if (left_product < right_product) {
         return -1; // v1 < v2
     } else if (left_product > right_product) {
