@@ -60,7 +60,11 @@ void REPL() {
             Value val = expr -> eval(global_env);
             if (val -> v_type == V_TERMINATE)
                 break;
-            val -> show(std :: cout); // value print
+            bool is_void_value = (val -> v_type == V_VOID);
+            bool is_explicit_void = isExplicitVoidCall(expr);
+            if (!is_void_value || is_explicit_void) {
+                val -> show(std :: cout); // value print
+            } 
         }
         catch (const RuntimeError &RE){
             // std::cout << RE.message();
