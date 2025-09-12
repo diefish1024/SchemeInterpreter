@@ -629,8 +629,11 @@ Value OrVar::eval(Assoc &e) { // or with short-circuit evaluation
 Value Not::evalRator(const Value &rand) { // not
     if (rand->v_type == V_BOOL) {
         auto b_val = static_cast<Boolean*>(rand.get());
-        return BooleanV(!(b_val->b));
+        if (b_val->b == false) {
+            return BooleanV(false);
+        }
     }
+    return BooleanV(true);
 }
 
 Value If::eval(Assoc &e) {
