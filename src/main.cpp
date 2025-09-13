@@ -53,17 +53,17 @@ void REPL() {
         #ifndef ONLINE_JUDGE
             std::cout << "scm> ";
         #endif
+        Syntax stx = readSyntax(std::cin); // read
+        // stx->show(std::cout); // syntax print
         try{
-            Syntax stx = readSyntax(std::cin); // read
-            // stx -> show(std :: cout); // syntax print
-            Expr expr = stx -> parse(global_env); // parse
-            Value val = expr -> eval(global_env);
-            if (val -> v_type == V_TERMINATE)
+            Expr expr = stx->parse(global_env); // parse
+            Value val = expr->eval(global_env);
+            if (val->v_type == V_TERMINATE)
                 break;
-            bool is_void_value = (val -> v_type == V_VOID);
+            bool is_void_value = (val->v_type == V_VOID);
             bool is_explicit_void = isExplicitVoidCall(expr);
             if (!is_void_value || is_explicit_void) {
-                val -> show(std :: cout); // value print
+                val -> show(std::cout); // value print
             } 
         }
         catch (const RuntimeError &RE){

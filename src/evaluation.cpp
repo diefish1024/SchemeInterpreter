@@ -574,17 +574,43 @@ Value convertSyntaxToValue(const Syntax& syntax) {
         return BooleanV(true);
     } else if (auto false_syntax = dynamic_cast<FalseSyntax*>(syntax.get())) {
         return BooleanV(false);
-    } else if (auto list = dynamic_cast<List*>(syntax.get())) {
-        Value result = NullV();
-        if (list->is_improper_list && list->improper_tail.get() != nullptr) {
-            result = convertSyntaxToValue(list->improper_tail);
+    } else if (auto list_syntax = dynamic_cast<List*>(syntax.get())) {
+        int dot_index = -1;
+        for (int i = 0; i < list_syntax->stxs.size(); ++i) {
+            if (auto sym_elem = dynamic_cast<SymbolSyntax*>(list_syntax->stxs[i].get())) {
+                if (sym_elem->s == ".") {
+                    dot_index = i;
+                    break;
+                }
+            }
         }
-        // Build the list from right to left
-        for (int i = list->stxs.size() - 1; i >= 0; --i) {
-            Value element = convertSyntaxToValue(list->stxs[i]);
-            result = PairV(element, result);
+        if (dot_index != -1) { // (A B . C)
+            // NOT (. A B C)
+            if (dot_index == 0) {
+                throw RuntimeError("quote: malformed dotted list (dot cannot be the first element)");
+            }
+            // NOT (A . B C) or (A .)
+            if (list_syntax->stxs.size() - dot_index != 2) {
+                throw RuntimeError("quote: malformed dotted list (dot must be followed by exactly one element)");
+            }
+            Value result_cdr = convertSyntaxToValue(list_syntax->stxs[dot_index + 1]);
+            
+            // (A B . C) ->  (A . (B . C))
+            Value current_list = result_cdr;
+            for (int i = dot_index - 1; i >= 0; --i) {
+                Value element = convertSyntaxToValue(list_syntax->stxs[i]);
+                current_list = PairV(element, current_list);
+            }
+            return current_list;
+        } else {
+            // (A B C)
+            Value result = NullV();
+            for (int i = list_syntax->stxs.size() - 1; i >= 0; --i) {
+                Value element = convertSyntaxToValue(list_syntax->stxs[i]);
+                result = PairV(element, result);
+            }
+            return result;
         }
-        return result;
     }
 
     throw RuntimeError("Unknown syntax type in quote");
@@ -720,6 +746,6 @@ Value Display::evalRator(const Value &rand) { // display function
     } else {
         rand->show(std::cout);
     }
-    
+    puts("");
     return VoidV();
 }
