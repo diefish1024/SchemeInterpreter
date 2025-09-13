@@ -64,6 +64,7 @@ void REPL() {
             bool is_explicit_void = isExplicitVoidCall(expr);
             if (!is_void_value || is_explicit_void) {
                 val -> show(std::cout); // value print
+                puts("");
             } 
         }
         catch (const RuntimeError &RE){
@@ -71,8 +72,8 @@ void REPL() {
             std::cout << "RuntimeError";
             std::cin.clear();
             std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            puts("");
         }
-        puts("");
     }
 }
 

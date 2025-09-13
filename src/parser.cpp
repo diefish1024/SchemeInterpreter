@@ -270,13 +270,16 @@ Expr List::parse(Assoc &env) {
 
             }
             case E_DEFINE: {
-                // (define var expr) or (define (func-name params...) body)
-                if (stxs.size() != 3) {
-                    throw RuntimeError("define: wrong number of arguments");
+                // (define <var> <expr>)
+                // (define <func> (lambda (<parm1> <parm2> ...) <expr1> <expr2> ...))
+                // (define (<func> <parm1> <parm2> ...) <expr1> <expr2> ...)
+
+                if (stxs.size() < 3) {
+                    throw RuntimeError("define: too few arguments");
                 }
 
-                // (define (func-name params...) body)
                 auto func_list = dynamic_cast<List*>(stxs[1].get());
+                // (define (<func> <parm1> <parm2> ...) <expr1> <expr2> ...)
                 if (func_list != nullptr) {
                     if (func_list->stxs.empty()) {
                         throw RuntimeError("define: function name missing");
@@ -295,19 +298,32 @@ Expr List::parse(Assoc &env) {
                         }
                         params.push_back(param->s);
                     }
+                    std::vector<Expr> body_exprs;
+                    for (size_t i = 2; i < stxs.size(); ++i) {
+                        body_exprs.push_back(stxs[i]->parse(env));
+                    }
+                    Expr lambda_body(nullptr);
+                    if (body_exprs.empty()) {
+                        lambda_body = Expr(new MakeVoid());
+                    } else if (body_exprs.size() == 1){
+                        lambda_body = body_exprs[0];
+                    } else {
+                        lambda_body = Expr(new Begin(body_exprs));
+                    }
 
-                    Expr lambda_expr = Expr(new Lambda(params, stxs[2]->parse(env)));
+                    Expr lambda_expr = Expr(new Lambda(params, lambda_body));
                     
                     return Expr(new Define(func_name->s, lambda_expr));
+                } else {
+                    // (define var expr) or (define <func> (lambda ...))
+                    auto var_name = dynamic_cast<SymbolSyntax*>(stxs[1].get());
+                    if (var_name == nullptr) {
+                        throw RuntimeError("define: variable of function name must be a symbol");
+                    }
+                    
+                    return Expr(new Define(var_name->s, stxs[2]->parse(env)));
                 }
                 
-                // (define var expr)
-                auto var_name = dynamic_cast<SymbolSyntax*>(stxs[1].get());
-                if (var_name == nullptr) {
-                    throw RuntimeError("define: variable name must be a symbol");
-                }
-                
-                return Expr(new Define(var_name->s, stxs[2]->parse(env)));
             }
             case E_LET:
             case E_LETREC: {
