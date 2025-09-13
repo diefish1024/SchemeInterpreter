@@ -48,17 +48,17 @@ std::istream &readSpace(std::istream &is) {
     while (true) {
         // 跳过空白字符
         while (isspace(is.peek()))
-        is.get();
+            is.get();
         
         // 检查是否是注释
         if (is.peek() == ';') {
-        // 跳过注释直到行末
-        while (is.peek() != '\n' && is.peek() != EOF)
-            is.get();
+            // 跳过注释直到行末
+            while (is.peek() != '\n' && is.peek() != EOF)
+                is.get();
         // 继续循环以跳过注释后的空白字符
         } else {
-        // 没有更多空白字符或注释，退出循环
-        break;
+            // 没有更多空白字符或注释，退出循环
+            break;
         }
     }
     return is;
@@ -206,7 +206,7 @@ Syntax readItem(std::istream &is) {
 
 Syntax readList(std::istream &is) {
     List *stx = new List();
-    while (readSpace(is).peek() != ')' && readSpace(is).peek() != ')') {
+    while (readSpace(is).peek() != ')' && readSpace(is).peek() != ']') {
         stx->stxs.push_back(readItem(is));
     }
     is.get(); // ')'
