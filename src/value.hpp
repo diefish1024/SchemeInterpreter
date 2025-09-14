@@ -72,6 +72,7 @@ Assoc empty();
 Assoc extend(const std::string&, const Value &, Assoc &);
 void modify(const std::string&, const Value &, Assoc &);
 Value find(const std::string &, Assoc &);
+bool bound(const std::string &, Assoc &);
 
 // ============================================================================
 // Simple Value Types

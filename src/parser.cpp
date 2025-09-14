@@ -64,9 +64,6 @@ Expr List::parse(Assoc &env) {
         return Expr(new Quote(Syntax(new List())));
     }
 
-    //TODO: check if the first element is a symbol
-    //If not, use Apply function to package to a closure;
-    //If so, find whether it's a variable or a keyword;
     SymbolSyntax *id = dynamic_cast<SymbolSyntax*>(stxs[0].get());
     if (id == nullptr) {
         std::vector<Expr> rands;
@@ -74,11 +71,16 @@ Expr List::parse(Assoc &env) {
             rands.push_back(stxs[i]->parse(env));
         }
         return Expr(new Apply(stxs[0]->parse(env), rands));
-    } else {
+    }
     string op = id->s;
-    // if (find(op, env).get() != nullptr) {
-    //     //TODO: TO COMPLETE THE PARAMETER PARSER LOGIC
-    // }
+    if (bound(op, env)) {
+        Expr rator = Expr(new Var(op));
+        std::vector<Expr> rands;
+        for (size_t i = 1; i < stxs.size(); ++i) {
+            rands.push_back(stxs[i]->parse(env));
+        }
+        return Expr(new Apply(rator, rands));
+    }
     if (primitives.count(op) != 0) {
         vector<Expr> parameters;
         for (size_t i = 1; i < stxs.size(); ++i) {
@@ -183,7 +185,6 @@ Expr List::parse(Assoc &env) {
     }
 
     if (reserved_words.count(op) != 0) {
-        
     	switch (reserved_words[op]) {
 			case E_BEGIN: {
                 // (begin expr ...)
@@ -242,27 +243,32 @@ Expr List::parse(Assoc &env) {
                 return Expr(new Cond(clauses));
             }
             case E_LAMBDA: {
+                // (lambda (param ...) body ...)
                 if (stxs.size() < 3) {
-                    throw RuntimeError("lambda: too few arguments.");
+                    throw RuntimeError("lambda: too few arguments");
                 }
                 auto args_list = dynamic_cast<List*>(stxs[1].get());
                 if (!args_list) {
-                    throw RuntimeError("lambda: parameters must be a list.");
+                    throw RuntimeError("lambda: parameters must be a list");
                 }
                 std::vector<std::string> parms;
                 for (const auto& arg : args_list->stxs) {
                     auto name = dynamic_cast<SymbolSyntax*>(arg.get());
                     if (!name) {
-                        throw RuntimeError("lambda: parameters must be symbols.");
+                        throw RuntimeError("lambda: parameters must be symbols");
                     }
                     parms.push_back(name->s);
                 }
+                Assoc env2 = env;
+                for (const auto& p : parms) {
+                    env2 = extend(p, Value(nullptr), env2);
+                }
                 if (stxs.size() == 3) {
-                    return Expr(new Lambda(parms, stxs[2]->parse(env)));
+                    return Expr(new Lambda(parms, stxs[2]->parse(env2)));
                 } else {
                     std::vector<Expr> body_exprs;
                     for (size_t i = 2; i < stxs.size(); ++i) {
-                        body_exprs.push_back(stxs[i]->parse(env));
+                        body_exprs.push_back(stxs[i]->parse(env2));
                     }
                     Expr body_expr_seq = Expr(new Begin(body_exprs));
                     return Expr(new Lambda(parms, body_expr_seq));
@@ -298,9 +304,13 @@ Expr List::parse(Assoc &env) {
                         }
                         params.push_back(param->s);
                     }
+                    Assoc env2 = env;
+                    for (const auto& p : params) {
+                        env2 = extend(p, Value(nullptr), env2);
+                    }
                     std::vector<Expr> body_exprs;
                     for (size_t i = 2; i < stxs.size(); ++i) {
-                        body_exprs.push_back(stxs[i]->parse(env));
+                        body_exprs.push_back(stxs[i]->parse(env2));
                     }
                     Expr lambda_body(nullptr);
                     if (body_exprs.empty()) {
@@ -320,13 +330,12 @@ Expr List::parse(Assoc &env) {
                     if (var_name == nullptr) {
                         throw RuntimeError("define: variable of function name must be a symbol");
                     }
-                    
                     return Expr(new Define(var_name->s, stxs[2]->parse(env)));
                 }
                 
             }
-            case E_LET:
-            case E_LETREC: {
+            case E_LET: {
+                // (let ((name expr) ...) body ...)
                 if (stxs.size() < 3) {
                     throw RuntimeError(op + ": bad syntax, requires bindings and a body");
                 }
@@ -336,6 +345,7 @@ Expr List::parse(Assoc &env) {
                 }
 
                 std::vector<std::pair<std::string, Expr>> bind;
+                std::vector<std::string> names;
                 for (const auto& bind_pair_stx : bind_list->stxs) {
                     auto bind_pair = dynamic_cast<List*>(bind_pair_stx.get());
                     if (bind_pair == nullptr || bind_pair->stxs.size() != 2) {
@@ -347,24 +357,65 @@ Expr List::parse(Assoc &env) {
                     }
                     auto expr = bind_pair->stxs[1]->parse(env);
                     bind.push_back({var_name->s, expr});
+                    names.push_back(var_name->s);
+                }
+                Assoc env2 = env;
+                for (const auto& name : names) {
+                    env2 = extend(name, Value(nullptr), env2);
+                }
+                Expr body(nullptr);
+                if (stxs.size() == 3) {
+                    body = stxs[2]->parse(env2);
+                } else {
+                    std::vector<Expr> body_exprs;
+                    for (size_t i = 2; i < stxs.size(); ++i) {
+                        body_exprs.push_back(stxs[i]->parse(env2));
+                    }
+                    body = Expr(new Begin(body_exprs));
+                }
+                return Expr(new Let(bind, body));
+            }
+            case E_LETREC: {
+                // (letrec ((name expr) ...) body ...)
+                if (stxs.size() < 3) {
+                    throw RuntimeError(op + ": bad syntax, requires bindings and a body");
+                }
+                auto bind_list = dynamic_cast<List*>(stxs[1].get());
+                if (bind_list == nullptr) {
+                    throw RuntimeError(op + ": bindings must be in a list");
+                }
+                Assoc env2 = env;
+                for (const auto& bind_pair_stx : bind_list->stxs) {
+                    auto bind_pair = dynamic_cast<List*>(bind_pair_stx.get());
+                    if (bind_pair == nullptr || bind_pair->stxs.size() != 2) {
+                        throw RuntimeError(op + ":each binding must be a (variable expression) pair");
+                    }
+                    auto var_name = dynamic_cast<SymbolSyntax*>(bind_pair->stxs[0].get());
+                    if (var_name == nullptr) {
+                        throw RuntimeError(op + ": variable in a binding must be a symbol");
+                    }
+                    env2 = extend(var_name->s, Value(nullptr), env2);
+                }
+
+                std::vector<std::pair<std::string, Expr>> bind;
+                for (const auto& bind_pair_stx : bind_list->stxs) {
+                    auto bind_pair = dynamic_cast<List*>(bind_pair_stx.get());
+                    auto var_name = dynamic_cast<SymbolSyntax*>(bind_pair->stxs[0].get());
+                    auto expr = bind_pair->stxs[1]->parse(env2);
+                    bind.push_back({var_name->s, expr});
                 }
 
                 Expr body(nullptr);
                 if (stxs.size() == 3) {
-                    body = stxs[2]->parse(env);
+                    body = stxs[2]->parse(env2);
                 } else {
                     std::vector<Expr> body_exprs;
                     for (size_t i = 2; i < stxs.size(); ++i) {
-                        body_exprs.push_back(stxs[i]->parse(env));
+                        body_exprs.push_back(stxs[i]->parse(env2));
                     }
                     body = Expr(new Begin(body_exprs));
                 }
-
-                if (reserved_words[op] == E_LET) {
-                    return Expr(new Let(bind, body));
-                } else {
-                    return Expr(new Letrec(bind, body));
-                }
+                return Expr(new Letrec(bind, body));   
             }
             case E_SET: {
                 // (set! var expr)
@@ -389,5 +440,4 @@ Expr List::parse(Assoc &env) {
         rands.push_back(stxs[i]->parse(env));
     }
     return Expr(new Apply(rator, rands));
-}
 }

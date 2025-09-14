@@ -92,6 +92,13 @@ Value find(const std::string &x, Assoc &l) {
     return Value(nullptr);
 }
 
+bool bound(const std::string &name, Assoc &env) {
+    for (Assoc p = env; p.get(); p = p->next) {
+        if (p->x == name) return true;
+    }
+    return false;
+}
+
 // ============================================================================
 // Simple Value Types Implementation
 // ============================================================================
