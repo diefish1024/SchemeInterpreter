@@ -69,26 +69,40 @@ Value Var::eval(Assoc &e) { // evaluation of variable
     Value matched_value = find(x, e);
     if (matched_value.get() == nullptr) {
         if (primitives.count(x)) {
-              std::map<ExprType, std::pair<Expr, std::vector<std::string>>> primitive_map = {
-                  {E_VOID, {new MakeVoid(), {}}},
-                  {E_EXIT, {new Exit(), {}}},
-                  {E_BOOLQ, {new IsBoolean(new Var("parm")), {"parm"}}},
-                  {E_INTQ, {new IsFixnum(new Var("parm")), {"parm"}}},
-                  {E_NULLQ, {new IsNull(new Var("parm")), {"parm"}}},
-                  {E_PAIRQ, {new IsPair(new Var("parm")), {"parm"}}},
-                  {E_PROCQ, {new IsProcedure(new Var("parm")), {"parm"}}},
-                  {E_SYMBOLQ, {new IsSymbol(new Var("parm")),{"parm"}}},
-                  {E_STRINGQ, {new IsString(new Var("parm")),{"parm"}}},
-                  {E_DISPLAY, {new Display(new Var("parm")),{"parm"}}},
-                  {E_EXPT,{new Expt(new Var("parm1"), new Var("parm2")),{"parm1", "parm2"}}},
-                  {E_PLUS,{new Plus(new Var("parm1"), new Var("parm2")),{"parm1", "parm2"}}},
-                  {E_MINUS,{new Minus(new Var("parm1"), new Var("parm2")),{"parm1", "parm2"}}},
-                  {E_MUL,{new Mult(new Var("parm1"), new Var("parm2")),{"parm1", "parm2"}}},
-                  {E_DIV,{new Div(new Var("parm1"), new Var("parm2")),{"parm1", "parm2"}}},
-                  {E_MODULO,{new Modulo(new Var("parm1"), new Var("parm2")),{"parm1", "parm2"}}},
-                  {E_EXPT,{new Expt(new Var("parm1"), new Var("parm2")),{"parm1", "parm2"}}},
-                  {E_EQQ,{new IsEq(new Var("parm1"), new Var("parm2")),{"parm1", "parm2"}}}
-              };
+                std::map<ExprType, std::pair<Expr, std::vector<std::string>>> primitive_map = {
+                    {E_VOID,     {new MakeVoid(), {}}},
+                    {E_EXIT,     {new Exit(), {}}},
+                    {E_BOOLQ,    {new IsBoolean(new Var("parm")), {"parm"}}},
+                    {E_INTQ,     {new IsFixnum(new Var("parm")), {"parm"}}},
+                    {E_NULLQ,    {new IsNull(new Var("parm")), {"parm"}}},
+                    {E_PAIRQ,    {new IsPair(new Var("parm")), {"parm"}}},
+                    {E_PROCQ,    {new IsProcedure(new Var("parm")), {"parm"}}},
+                    {E_SYMBOLQ,  {new IsSymbol(new Var("parm")), {"parm"}}},
+                    {E_STRINGQ,  {new IsString(new Var("parm")), {"parm"}}},
+                    {E_LISTQ,    {new IsList(new Var("parm")), {"parm"}}},
+                    {E_DISPLAY,  {new Display(new Var("parm")), {"parm"}}},
+                    {E_PLUS,     {new Plus(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
+                    {E_MINUS,    {new Minus(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
+                    {E_MUL,      {new Mult(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
+                    {E_DIV,      {new Div(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
+                    {E_MODULO,   {new Modulo(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
+                    {E_EXPT,     {new Expt(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
+                    {E_LT,       {new Less(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
+                    {E_LE,       {new LessEq(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
+                    {E_EQ,       {new Equal(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
+                    {E_GE,       {new GreaterEq(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
+                    {E_GT,       {new Greater(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
+                    {E_EQQ,      {new IsEq(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
+                    {E_CONS,     {new Cons(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
+                    {E_CAR,      {new Car(new Var("parm")), {"parm"}}},
+                    {E_CDR,      {new Cdr(new Var("parm")), {"parm"}}},
+                    {E_LIST,     {new ListFunc({new Var("parm1"), new Var("parm2")}), {"parm1","parm2"}}},
+                    {E_SETCAR,   {new SetCar(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
+                    {E_SETCDR,   {new SetCdr(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
+                    {E_NOT,      {new Not(new Var("parm")), {"parm"}}},
+                    {E_AND,      {new AndVar({new Var("parm1"), new Var("parm2")}), {"parm1","parm2"}}},
+                    {E_OR,       {new OrVar({new Var("parm1"), new Var("parm2")}), {"parm1","parm2"}}}
+                };
 
             auto it = primitive_map.find(primitives[x]);
             if (it != primitive_map.end()) {
