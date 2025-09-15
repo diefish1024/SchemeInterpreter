@@ -505,11 +505,21 @@ Value Cdr::evalRator(const Value &rand) { // cdr
 }
 
 Value SetCar::evalRator(const Value &rand1, const Value &rand2) { // set-car!
-    //TODO: To complete the set-car! logic
+    if (rand1->v_type != V_PAIR) {
+        throw RuntimeError("set-car!: expects argument to be a pair");
+    }
+    auto p = dynamic_cast<Pair*>(rand1.get());
+    p->car = rand2;
+    return VoidV();
 }
 
 Value SetCdr::evalRator(const Value &rand1, const Value &rand2) { // set-cdr!
-   //TODO: To complete the set-cdr! logic
+   if (rand1->v_type != V_PAIR) {
+        throw RuntimeError("set-cdr!: expects argument to be a pair");
+    }
+    auto p = dynamic_cast<Pair*>(rand1.get());
+    p->cdr = rand2;
+    return VoidV();
 }
 
 Value IsEq::evalRator(const Value &rand1, const Value &rand2) { // eq?
