@@ -670,10 +670,10 @@ Value Not::evalRator(const Value &rand) { // not
     if (rand->v_type == V_BOOL) {
         auto b_val = static_cast<Boolean*>(rand.get());
         if (b_val->b == false) {
-            return BooleanV(false);
+            return BooleanV(true);
         }
     }
-    return BooleanV(true);
+    return BooleanV(false);
 }
 
 Value If::eval(Assoc &e) {
