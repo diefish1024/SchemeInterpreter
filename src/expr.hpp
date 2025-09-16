@@ -367,8 +367,9 @@ struct If : ExprBase {
 };
 
 struct Cond : ExprBase {
+    bool has_else;
     std::vector<std::vector<Expr>> clauses;
-    Cond(const std::vector<std::vector<Expr>> &);
+    Cond(const bool, const std::vector<std::vector<Expr>> &);
     virtual Value eval(Assoc &) override;
 };
 

@@ -224,7 +224,7 @@ Expr List::parse(Assoc &env) {
                         throw RuntimeError("Empty clause in cond expression");
                     }
                     std::vector<Expr> clause;
-                    auto first = dynamic_cast<Symbol*>(clause_list->stxs[0].get());
+                    auto first = dynamic_cast<SymbolSyntax*>(clause_list->stxs[0].get());
                     if (first && first->s == "else") {
                         is_else = true;
                         for (size_t j = 1; j < clause_list->stxs.size(); ++j) {
@@ -240,7 +240,7 @@ Expr List::parse(Assoc &env) {
                         throw RuntimeError("Else clause can only appear as the last clause in a cond expression");
                     }
                 }
-                return Expr(new Cond(clauses));
+                return Expr(new Cond(is_else, clauses));
             }
             case E_LAMBDA: {
                 // (lambda (param ...) body ...)

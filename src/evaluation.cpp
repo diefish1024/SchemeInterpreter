@@ -703,8 +703,27 @@ Value If::eval(Assoc &e) {
 }
 
 Value Cond::eval(Assoc &env) {
-    // TODO
-
+    int n = has_else ? clauses.size() - 1 : clauses.size();
+    for (int i = 0; i < n; ++i) {
+        Value pred_val = clauses[i][0]->eval(env);
+        if (pred_val->v_type == V_BOOL) {
+            auto b_val = static_cast<Boolean*>(pred_val.get());
+            if (b_val->b) {
+                auto res = pred_val;
+                for (int j = 1; j < clauses[i].size(); ++j) {
+                    res = clauses[i][j]->eval(env);
+                }
+                return res;
+            }
+        }
+    }
+    auto res = VoidV();
+    if (has_else) {
+        for (const auto& expr : clauses[n]) {
+            res = expr->eval(env);
+        }
+    }
+    return res;
 }
 
 Value Lambda::eval(Assoc &env) { 

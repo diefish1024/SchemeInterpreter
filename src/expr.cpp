@@ -137,7 +137,7 @@ Quote::Quote(const Syntax &t) : ExprBase(E_QUOTE), s(t) {}
 
 If::If(const Expr &c, const Expr &c_t, const Expr &c_e) : ExprBase(E_IF), cond(c), conseq(c_t), alter(c_e) {}
 
-Cond::Cond(const std::vector<std::vector<Expr>> &cls) : ExprBase(E_COND), clauses(cls) {}
+Cond::Cond(const bool h_e, const std::vector<std::vector<Expr>> &cls) : ExprBase(E_COND), has_else(h_e), clauses(cls) {}
 
 //VARIABLE AND FUNCITON DEFINITION
 
