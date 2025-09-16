@@ -80,7 +80,16 @@ void modify(const std::string &x, const Value &v, Assoc &lst) {
             return;
         }
     }
-    throw RuntimeError("set!: undefined variable: " + x);
+    throw RuntimeError("undefined variable: " + x);
+}
+
+void insert(const std::string &x, const Value &v, Assoc &lst) {
+    if (!lst.get()) {
+        auto head = Assoc(nullptr);
+        lst = extend(x, v, head);
+        return;
+    }
+    lst->next = extend(x, v, lst->next);
 }
 
 Value find(const std::string &x, Assoc &l) {

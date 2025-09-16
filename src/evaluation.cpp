@@ -752,7 +752,7 @@ Value Apply::eval(Assoc &e) {
 
 Value Define::eval(Assoc &env) {
     Assoc rec_env = env;
-    rec_env = extend(var, Value(nullptr), rec_env);
+    insert(var, Value(nullptr), rec_env);
     modify(var, e->eval(rec_env), rec_env);
     env = rec_env;
     return VoidV();
