@@ -69,7 +69,7 @@ Value Var::eval(Assoc &e) { // evaluation of variable
     Value matched_value = find(x, e);
     if (matched_value.get() == nullptr) {
         if (primitives.count(x)) {
-                std::map<ExprType, std::pair<Expr, std::vector<std::string>>> primitive_map = {
+                static std::map<ExprType, std::pair<Expr, std::vector<std::string>>> primitive_map = {
                     {E_VOID,     {new MakeVoid(), {}}},
                     {E_EXIT,     {new Exit(), {}}},
                     {E_BOOLQ,    {new IsBoolean(new Var("parm")), {"parm"}}},
@@ -81,27 +81,27 @@ Value Var::eval(Assoc &e) { // evaluation of variable
                     {E_STRINGQ,  {new IsString(new Var("parm")), {"parm"}}},
                     {E_LISTQ,    {new IsList(new Var("parm")), {"parm"}}},
                     {E_DISPLAY,  {new Display(new Var("parm")), {"parm"}}},
-                    {E_PLUS,     {new Plus(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
-                    {E_MINUS,    {new Minus(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
-                    {E_MUL,      {new Mult(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
-                    {E_DIV,      {new Div(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
+                    {E_PLUS,     {new PlusVar({}),  {}}},
+                    {E_MINUS,    {new MinusVar({}), {}}},
+                    {E_MUL,      {new MultVar({}),  {}}},
+                    {E_DIV,      {new DivVar({}),   {}}},
                     {E_MODULO,   {new Modulo(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
                     {E_EXPT,     {new Expt(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
-                    {E_LT,       {new Less(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
-                    {E_LE,       {new LessEq(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
-                    {E_EQ,       {new Equal(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
-                    {E_GE,       {new GreaterEq(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
-                    {E_GT,       {new Greater(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
-                    {E_EQQ,      {new IsEq(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
+                    {E_LT,       {new LessVar({}),      {}}},
+                    {E_LE,       {new LessEqVar({}),    {}}},
+                    {E_EQ,       {new EqualVar({}),     {}}},
+                    {E_GE,       {new GreaterEqVar({}), {}}},
+                    {E_GT,       {new GreaterVar({}),   {}}},
+                    {E_EQQ,      {new EqualVar({}), {}}},
                     {E_CONS,     {new Cons(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
                     {E_CAR,      {new Car(new Var("parm")), {"parm"}}},
                     {E_CDR,      {new Cdr(new Var("parm")), {"parm"}}},
-                    {E_LIST,     {new ListFunc({new Var("parm1"), new Var("parm2")}), {"parm1","parm2"}}},
+                    {E_LIST,     {new ListFunc({}), {}}},
                     {E_SETCAR,   {new SetCar(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
                     {E_SETCDR,   {new SetCdr(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
                     {E_NOT,      {new Not(new Var("parm")), {"parm"}}},
-                    {E_AND,      {new AndVar({new Var("parm1"), new Var("parm2")}), {"parm1","parm2"}}},
-                    {E_OR,       {new OrVar({new Var("parm1"), new Var("parm2")}), {"parm1","parm2"}}}
+                    {E_AND,      {new AndVar({}), {}}},
+                    {E_OR,       {new OrVar({}), {}}}
                 };
 
             auto it = primitive_map.find(primitives[x]);
@@ -740,7 +740,12 @@ Value Apply::eval(Assoc &e) {
     for (const auto& expr : rand) {
         args.push_back(expr->eval(e));
     }
-    if (args.size() != clos_ptr->parameters.size()) {throw RuntimeError("Wrong number of arguments");}
+    if (auto varNode = dynamic_cast<Variadic*>(clos_ptr->e.get())) {
+        return varNode->evalRator(args);
+    }
+    if (args.size() != clos_ptr->parameters.size()) {
+        throw RuntimeError("Wrong number of arguments");
+    }
 
     Assoc param_env = clos_ptr->env;
     for (size_t i = 0; i < args.size(); ++i) {
